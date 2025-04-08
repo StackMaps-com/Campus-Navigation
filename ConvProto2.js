@@ -193,20 +193,31 @@ function findPoint(rooms, nodes, edges, sourceRoomName, destRoomName) {
         centroid2 = dNode.coordinates;
     }
 
+    // Define custom icons
+    const sourceIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    const destinationIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
     if (centroid1) {
-        sourceCentroidMarker = L.circleMarker([centroid1.x, centroid1.y], {
-            radius: 6,
-            color: 'red',
-            fillOpacity: 1
-        }).addTo(map);
+        sourceCentroidMarker = L.marker([centroid1.x, centroid1.y], { icon: sourceIcon }).addTo(map);
     }
 
     if (centroid2) {
-        destCentroidMarker = L.circleMarker([centroid2.x, centroid2.y], {
-            radius: 6,
-            color: 'blue',
-            fillOpacity: 1
-        }).addTo(map);
+        destCentroidMarker = L.marker([centroid2.x, centroid2.y], { icon: destinationIcon }).addTo(map);
     }
 
     const findNearestEdgeAndParallelPoint = (centroid) => {
@@ -498,3 +509,4 @@ function addEnterKeyListener() {
         });
     }
 }
+
