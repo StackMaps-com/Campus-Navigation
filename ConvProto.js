@@ -6,6 +6,8 @@ let offsetX = 0, offsetY = 0;
 let isDragging = false;
 let lastX, lastY;
 let roomsData = [];
+let graphNodes = [];
+let graphEdges = [];
 
 function updateCanvasSize() {
   canvas.width = window.innerWidth;
@@ -137,6 +139,151 @@ async function loadJson() {
     console.error('Error loading JSON:', error);
   }
 }
+
+function getRoomCentroid(room) {
+  let sumX = 0;
+  let sumY = 0;
+  room.points.forEach(point => {
+    sumX += point.x;
+    sumY += point.y;
+  });
+  return {
+    x: sumX / room.points.length,
+    y: sumY / room.points.length
+  };
+}
+
+function findClosestHallwayPoint(room) {
+  const centroid = getRoomCentroid(room);
+  let closestPoint = null;
+  let minDistance = Infinity;
+  const tolerance = 1e-6; // Small value for floating-point comparisons
+
+  graphEdges.forEach(edge => {
+    const node1 = graphNodes.find(node => node.id === edge.source);
+    const node2 = graphNodes.find(node => node.id === edge.target);
+
+    if (!node1 || !node2 || !node1.coordinates || !node2.coordinates) {
+      return; // Skip if node data is missing
+    }
+
+    const p1 = node1.coordinates;
+    const p2 = node2.coordinates;
+
+    // Check if the edge is horizontal
+    if (Math.abs(p1.y - p2.y) < tolerance) {
+      // Check if the centroid's y is aligned with the edge's y
+      if (Math.abs(centroid.y - p1.y) < tolerance) {
+        // Project the centroid's x onto the edge
+        const projectedX = Math.max(Math.min(centroid.x, Math.max(p1.x, p2.x)), Math.min(p1.x, p2.x));
+        const projectedPoint = { x: projectedX, y: p1.y };
+        const distance = Math.sqrt((centroid.x - projectedPoint.x) ** 2 + (centroid.y - projectedPoint.y) ** 2);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPoint = projectedPoint;
+        }
+      }
+    }
+    // Check if the edge is vertical
+    else if (Math.abs(p1.x - p2.x) < tolerance) {
+      // Check if the centroid's x is aligned with the edge's x
+      if (Math.abs(centroid.x - p1.x) < tolerance) {
+        // Project the centroid's y onto the edge
+        const projectedY = Math.max(Math.min(centroid.y, Math.max(p1.y, p2.y)), Math.min(p1.y, p2.y));
+        const projectedPoint = { x: p1.x, y: projectedY };
+        const distance = Math.sqrt((centroid.x - projectedPoint.x) ** 2 + (centroid.y - projectedPoint.y) ** 2);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPoint = projectedPoint;
+        }
+      }
+    }
+  });
+
+  return closestPoint;
+}
+
+function findClosestNode(point) {
+  if (!point || !graphNodes || graphNodes.length === 0) {
+    return null;
+  }
+  let closestNode = null;
+  let minDistance = Infinity;
+
+  graphNodes.forEach(node => {
+    if (node.coordinates) {
+      const distance = Math.sqrt((point.x - node.coordinates.x) ** 2 + (point.y - node.coordinates.y) ** 2);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestNode = node;
+      }
+    }
+  });
+  return closestNode;
+}
+
+function findPath(startNodeId, endNodeId) {
+  if (!startNodeId || !endNodeId || startNodeId === endNodeId) {
+    return null;
+  }
+
+  const queue = [{ node: startNodeId, path: [startNodeId] }];
+  const visited = new Set();
+
+  while (queue.length > 0) {
+    const { node, path } = queue.shift();
+
+    if (node === endNodeId) {
+      return path;
+    }
+
+    visited.add(node);
+
+    const neighbors = graphEdges
+      .filter(edge => edge.source === node || edge.target === node)
+      .map(edge => (edge.source === node ? edge.target : edge.source))
+      .filter(neighbor => !visited.has(neighbor));
+
+    neighbors.forEach(neighbor => {
+      queue.push({ node: neighbor, path: [...path, neighbor] });
+    });
+  }
+
+  return null; // No path found
+}
+
+function drawPath(path) {
+  if (!path || path.length < 2) {
+    return;
+  }
+
+  ctx.save();
+  ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY);
+  ctx.scale(scale, scale);
+  ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+  ctx.beginPath();
+  ctx.strokeStyle = "blue";
+  ctx.lineWidth = 5;
+
+  const startNode = graphNodes.find(node => node.id === path[0]);
+  if (startNode && startNode.coordinates) {
+    ctx.moveTo(startNode.coordinates.x, startNode.coordinates.y);
+  }
+
+  for (let i = 1; i < path.length; i++) {
+    const node = graphNodes.find(n => n.id === path[i]);
+    if (node && node.coordinates) {
+      ctx.lineTo(node.coordinates.x, node.coordinates.y);
+    }
+  }
+
+  ctx.stroke();
+  ctx.restore();
+}
+
 canvas.addEventListener('mousedown', (e) => {
   isDragging = true;
   lastX = e.clientX;
@@ -196,26 +343,51 @@ function applyRoomHighlights(currentLocation, destination) {
   const current = currentLocation ? currentLocation.toLowerCase() : null;
   const dest = destination ? destination.toLowerCase() : null;
 
-  const sourceFound = current ? roomsData.some(room => room.name.toLowerCase() === current) : false;
-  const destinationFound = dest ? roomsData.some(room => room.name.toLowerCase() === dest) : false;
+  roomsData.forEach(room => {
+    room.highlightColor = "grey"; // Default color
+  });
 
-  if ((current && !sourceFound) || (dest && !destinationFound)) {
-    roomsData.forEach(room => {
-      room.highlightColor = "grey";
-    });
-  } else {
-    roomsData.forEach(room => {
-      const roomName = room.name.toLowerCase();
-      if (current && roomName === current) {
-        room.highlightColor = "green";
-      } else if (dest && roomName === dest) {
-        room.highlightColor = "lightcoral";
-      } else {
-        room.highlightColor = "grey";
-      }
-    });
+  let startPoint = null;
+  let endPoint = null;
+  let startRoomName = null;
+  let endRoomName = null;
+
+  let startNode = null;
+  let endNode = null;
+
+  roomsData.forEach(room => {
+    const roomNameLower = room.name.toLowerCase();
+    if (current && roomNameLower === current) {
+      room.highlightColor = "green";
+      startPoint = findClosestHallwayPoint(room);
+      startRoomName = room.name;
+      console.log("Start Room:", room.name, "Closest Hallway Point:", startPoint);
+    }
+    if (dest && roomNameLower === dest) {
+      room.highlightColor = "lightcoral";
+      endPoint = findClosestHallwayPoint(room);
+      endRoomName = room.name;
+      console.log("End Room:", room.name, "Closest Hallway Point:", endPoint);
+    }
+  });
+
+  if (startPoint) {
+    startNode = findClosestNode(startPoint);
+    console.log("Closest Start Node:", startNode);
   }
-  drawRooms(roomsData);
+  if (endPoint) {
+    endNode = findClosestNode(endPoint);
+    console.log("Closest End Node:", endNode);
+  }
+
+  if (startNode && endNode) {
+    const path = findPath(startNode.id, endNode.id);
+    console.log("Found Path:", path);
+    drawPath(path);
+  } else {
+    // If no start or end room is selected or found, redraw rooms without path
+    drawRooms(roomsData);
+  }
 }
 
 function findRoute() {
