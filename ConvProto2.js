@@ -3,7 +3,8 @@
 var map = L.map('map', {
     crs: L.CRS.Simple,
     minZoom: -100,
-    maxZoom: 1
+    maxZoom: 1,
+    attributionControl : false
 });
 
 let mapRooms = [], mapNodes = [], mapEdges = [];
@@ -21,7 +22,7 @@ async function loadMapData() {
         mapNodes = json.nodes || [];
         mapEdges = json.edges || [];
         drawRooms(mapRooms);
-        // findPoint(mapRooms, mapNodes, mapEdges, "A - 213", "C - 210"); // Initial call removed
+        addEnterKeyListener();
         return { rooms: mapRooms, nodes: mapNodes, edges: mapEdges };
     } catch (err) {
         console.error("Failed to load JSON : ", err);
@@ -36,7 +37,7 @@ function drawRooms(rooms) {
     rooms.forEach((room) => {
         const converted = room.coordinates.map((point) => [point.x, point.y]);
         allpoints.push(...converted);
-        const polygon = L.polygon(converted, { color: 'green', weight: 2 }).addTo(map);
+        const polygon = L.polygon(converted, { color: 'green' , weight: 1.3 }).addTo(map);
         polygon.bindPopup(room.name || "Unnamed Room");
 
         // Calculate centroid for label position
@@ -89,6 +90,11 @@ let destParallelPoint;
 let nearest1ResultGlobal;
 let nearest2ResultGlobal;
 
+function normalizeRoomName(name) {
+    if (!name) return "";
+    return name.toUpperCase().replace(/[\s-]/g, ''); // Convert to uppercase and remove spaces and hyphens
+}
+
 function findPoint(rooms, nodes, edges, sourceRoomName, destRoomName) {
     // Remove previous markers if they exist
     if (sourceCentroidMarker) {
@@ -104,8 +110,15 @@ function findPoint(rooms, nodes, edges, sourceRoomName, destRoomName) {
         map.removeLayer(destParallelMarker);
     }
 
-    const sRoom = rooms.find((room) => { return room.name === sourceRoomName });
-    const dRoom = rooms.find((room) => { return room.name === destRoomName });
+    const normalizedSourceName = normalizeRoomName(sourceRoomName);
+    const normalizedDestName = normalizeRoomName(destRoomName);
+
+    const sRoom = rooms.find((room) => {
+        return normalizeRoomName(room.name) === normalizedSourceName;
+    });
+    const dRoom = rooms.find((room) => {
+        return normalizeRoomName(room.name) === normalizedDestName;
+    });
     // console.log("Source Room:", sRoom, "Destination Room:", dRoom);
     if (!sRoom || !dRoom) {
         alert("Source or Destination room not found!");
@@ -406,4 +419,32 @@ function handleGo() {
     }
 
     findPoint(mapRooms, mapNodes, mapEdges, sourceRoomName, destRoomName);
+}
+
+function addEnterKeyListener() {
+    const sourceInput = document.getElementById("sourceRoomInput");
+    const destinationInput = document.getElementById("destinationRoomInput");
+    const goButton = document.querySelector('button'); // Assuming there's only one button
+
+    if (sourceInput) {
+        sourceInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (goButton) {
+                    goButton.click();
+                }
+            }
+        });
+    }
+
+    if (destinationInput) {
+        destinationInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (goButton) {
+                    goButton.click();
+                }
+            }
+        });
+    }
 }

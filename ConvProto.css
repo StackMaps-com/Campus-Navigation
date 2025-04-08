@@ -55,6 +55,7 @@ html, body {
 #map {
   flex: 1;
   width: 100%;
+  background-color: #ffffff61;
 }
 
 /* Optional container padding if needed */
