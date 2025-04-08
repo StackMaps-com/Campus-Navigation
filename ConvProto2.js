@@ -113,47 +113,101 @@ function findPoint(rooms, nodes, edges, sourceRoomName, destRoomName) {
     const normalizedSourceName = normalizeRoomName(sourceRoomName);
     const normalizedDestName = normalizeRoomName(destRoomName);
 
-    const sRoom = rooms.find((room) => {
-        return normalizeRoomName(room.name) === normalizedSourceName;
-    });
-    const dRoom = rooms.find((room) => {
-        return normalizeRoomName(room.name) === normalizedDestName;
-    });
-    // console.log("Source Room:", sRoom, "Destination Room:", dRoom);
-    if (!sRoom || !dRoom) {
+    const findRoomOrNode = (nameToFind, roomData, nodeData) => {
+        const normalizedName = normalizeRoomName(nameToFind);
+        let foundItem = null;
+
+        // Check in rooms
+        for (const item of roomData) {
+            if (normalizeRoomName(item.name) === normalizedName || (item.alias && Array.isArray(item.alias) && item.alias.some(alias => normalizeRoomName(alias) === normalizedName))) {
+                foundItem = { type: 'room', data: item };
+                return foundItem;
+            }
+        }
+
+        // Check in nodes if not found in rooms
+        for (const item of nodeData) {
+            if (normalizeRoomName(item.name) === normalizedName || (item.alias && Array.isArray(item.alias) && item.alias.some(alias => normalizeRoomName(alias) === normalizedName))) {
+                foundItem = { type: 'node', data: item };
+                return foundItem;
+            }
+        }
+
+        return null;
+    };
+
+    const sourceResult = findRoomOrNode(normalizedSourceName, rooms, nodes);
+    const destResult = findRoomOrNode(normalizedDestName, rooms, nodes);
+
+    let sRoom = null;
+    let dRoom = null;
+    let sNode = null;
+    let dNode = null;
+
+    if (sourceResult) {
+        if (sourceResult.type === 'room') {
+            sRoom = sourceResult.data;
+        } else if (sourceResult.type === 'node') {
+            sNode = sourceResult.data;
+        }
+    }
+
+    if (destResult) {
+        if (destResult.type === 'room') {
+            dRoom = destResult.data;
+        } else if (destResult.type === 'node') {
+            dNode = destResult.data;
+        }
+    }
+
+    // console.log("Source:", sourceResult, "Destination:", destResult);
+
+    if (!sourceResult || !destResult) {
         alert("Source or Destination room not found!");
         return;
     }
 
-    const centroid1 = sRoom.coordinates.reduce((acc, point) => {
-        acc.x += point.x;
-        acc.y += point.y;
-        return acc;
-    }, { x: 0, y: 0 });
-    centroid1.x /= sRoom.coordinates.length;
-    centroid1.y /= sRoom.coordinates.length;
-    // console.log("Centroid 1:", centroid1.x, centroid1.y);
+    let centroid1;
+    if (sRoom) {
+        centroid1 = sRoom.coordinates.reduce((acc, point) => {
+            acc.x += point.x;
+            acc.y += point.y;
+            return acc;
+        }, { x: 0, y: 0 });
+        centroid1.x /= sRoom.coordinates.length;
+        centroid1.y /= sRoom.coordinates.length;
+    } else if (sNode && sNode.coordinates) {
+        centroid1 = sNode.coordinates;
+    }
 
-    const centroid2 = dRoom.coordinates.reduce((acc, point) => {
-        acc.x += point.x;
-        acc.y += point.y;
-        return acc;
-    }, { x: 0, y: 0 });
-    centroid2.x /= dRoom.coordinates.length;
-    centroid2.y /= dRoom.coordinates.length;
-    // console.log("Centroid 2:", centroid2.x, centroid2.y);
+    let centroid2;
+    if (dRoom) {
+        centroid2 = dRoom.coordinates.reduce((acc, point) => {
+            acc.x += point.x;
+            acc.y += point.y;
+            return acc;
+        }, { x: 0, y: 0 });
+        centroid2.x /= dRoom.coordinates.length;
+        centroid2.y /= dRoom.coordinates.length;
+    } else if (dNode && dNode.coordinates) {
+        centroid2 = dNode.coordinates;
+    }
 
-    sourceCentroidMarker = L.circleMarker([centroid1.x, centroid1.y], {
-        radius: 6,
-        color: 'red',
-        fillOpacity: 1
-    }).addTo(map);
+    if (centroid1) {
+        sourceCentroidMarker = L.circleMarker([centroid1.x, centroid1.y], {
+            radius: 6,
+            color: 'red',
+            fillOpacity: 1
+        }).addTo(map);
+    }
 
-    destCentroidMarker = L.circleMarker([centroid2.x, centroid2.y], {
-        radius: 6,
-        color: 'blue',
-        fillOpacity: 1
-    }).addTo(map);
+    if (centroid2) {
+        destCentroidMarker = L.circleMarker([centroid2.x, centroid2.y], {
+            radius: 6,
+            color: 'blue',
+            fillOpacity: 1
+        }).addTo(map);
+    }
 
     const findNearestEdgeAndParallelPoint = (centroid) => {
         let nearestEdge = null;
@@ -210,34 +264,30 @@ function findPoint(rooms, nodes, edges, sourceRoomName, destRoomName) {
         return { edge: nearestEdge, distance: minDistance, parallelPoint: parallelPoint, nodes: nearestNodes };
     };
 
-    nearest1ResultGlobal = findNearestEdgeAndParallelPoint(centroid1);
-    // console.log("Nearest to Centroid 1:", nearest1ResultGlobal);
-    if (nearest1ResultGlobal.edge && nearest1ResultGlobal.nodes && nearest1ResultGlobal.parallelPoint) {
-        // console.log("Nearest Edge Nodes (Centroid 1):", nearest1ResultGlobal.nodes.source.id, nearest1ResultGlobal.nodes.target.id);
-        // console.log("Parallel Point (Centroid 1):", nearest1ResultGlobal.parallelPoint);
-        sourceParallelMarker = L.circleMarker([nearest1ResultGlobal.parallelPoint.x, nearest1ResultGlobal.parallelPoint.y], {
-            radius: 4,
-            color: 'lime',
-            fillOpacity: 1
-        }).addTo(map);
-        // .bindPopup(`Parallel point to ${sourceRoomName}`);
-        sourceNearestNodes = nearest1ResultGlobal.nodes;
-        sourceParallelPoint = nearest1ResultGlobal.parallelPoint;
+    if (centroid1) {
+        nearest1ResultGlobal = findNearestEdgeAndParallelPoint(centroid1);
+        if (nearest1ResultGlobal.edge && nearest1ResultGlobal.nodes && nearest1ResultGlobal.parallelPoint) {
+            sourceParallelMarker = L.circleMarker([nearest1ResultGlobal.parallelPoint.x, nearest1ResultGlobal.parallelPoint.y], {
+                radius: 4,
+                color: 'lime',
+                fillOpacity: 1
+            }).addTo(map);
+            sourceNearestNodes = nearest1ResultGlobal.nodes;
+            sourceParallelPoint = nearest1ResultGlobal.parallelPoint;
+        }
     }
 
-    nearest2ResultGlobal = findNearestEdgeAndParallelPoint(centroid2);
-    // console.log("Nearest to Centroid 2:", nearest2ResultGlobal);
-    if (nearest2ResultGlobal.edge && nearest2ResultGlobal.nodes && nearest2ResultGlobal.parallelPoint) {
-        // console.log("Nearest Edge Nodes (Centroid 2):", nearest2ResultGlobal.nodes.source.id, nearest2ResultGlobal.nodes.target.id);
-        // console.log("Parallel Point (Centroid 2):", nearest2ResultGlobal.parallelPoint);
-        destParallelMarker = L.circleMarker([nearest2ResultGlobal.parallelPoint.x, nearest2ResultGlobal.parallelPoint.y], {
-            radius: 4,
-            color: 'cyan',
-            fillOpacity: 1
-        }).addTo(map);
-        // .bindPopup(`Parallel point to ${destRoomName}`);
-        destNearestNodes = nearest2ResultGlobal.nodes;
-        destParallelPoint = nearest2ResultGlobal.parallelPoint;
+    if (centroid2) {
+        nearest2ResultGlobal = findNearestEdgeAndParallelPoint(centroid2);
+        if (nearest2ResultGlobal.edge && nearest2ResultGlobal.nodes && nearest2ResultGlobal.parallelPoint) {
+            destParallelMarker = L.circleMarker([nearest2ResultGlobal.parallelPoint.x, nearest2ResultGlobal.parallelPoint.y], {
+                radius: 4,
+                color: 'cyan',
+                fillOpacity: 1
+            }).addTo(map);
+            destNearestNodes = nearest2ResultGlobal.nodes;
+            destParallelPoint = nearest2ResultGlobal.parallelPoint;
+        }
     }
 
     if (nearest1ResultGlobal && nearest2ResultGlobal && nearest1ResultGlobal.parallelPoint && nearest2ResultGlobal.parallelPoint && nodes && edges) {

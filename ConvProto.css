@@ -62,3 +62,43 @@ html, body {
 .container {
   padding-right: 30%;
 }
+
+/* Style for Leaflet zoom control container - REMOVE BORDER RADIUS AND SHADOW */
+.leaflet-control-zoom {
+  /* border-radius: 4px; - REMOVED */
+  overflow: hidden; /* To contain rounded corners of buttons if we add them later */
+  /* box-shadow: 0 2px 4px rgba(0,0,0,0.2); - REMOVED */
+  border: none; /* Ensure no border on the container */
+}
+
+/* Style for individual zoom buttons */
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  display: block;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  text-decoration: none;
+  color: #333;
+  font-size: 20px;
+  font-weight: bold;
+  background-color: white;
+  border: none; /* Ensure no border on the buttons */
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+/* Hover effect for zoom buttons */
+.leaflet-control-zoom-in:hover,
+.leaflet-control-zoom-out:hover {
+  background-color: #f0f0f0;
+  color: #007bff;
+}
+
+/* Focus style for accessibility */
+.leaflet-control-zoom-in:focus,
+.leaflet-control-zoom-out:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #007bff;
+}

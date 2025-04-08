@@ -132,7 +132,8 @@
             "x": 77000,
             "y": 90000
           }
-        ]
+        ],
+        "alias" : ["room of secrets"]
       },
       {
         "name": "B-203",
@@ -1620,7 +1621,8 @@
         "coordinates": {
           "x": 152200,
           "y": 20875
-        }
+        },
+        "alias" : ["Pg entrance"]
       }
     ],
     "edges": [
