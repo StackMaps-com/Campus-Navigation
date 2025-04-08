@@ -2,24 +2,27 @@
 
 var map = L.map('map', {
     crs: L.CRS.Simple,
-    minZoom: -50,
-    maxZoom: 5
+    minZoom: -100,
+    maxZoom: 1
 });
+
+let mapRooms = [], mapNodes = [], mapEdges = [];
+let routeLayer = null;
+let sourceCentroidMarker; // To store the source centroid marker
+let destCentroidMarker;   // To store the destination centroid marker
+let sourceParallelMarker; // To store the source parallel point marker
+let destParallelMarker;   // To store the destination parallel point marker
 
 async function loadMapData() {
     try {
         const response = await fetch("new.json");
         const json = await response.json();
-
-        const rooms = json.rooms || [];
-        const nodes = json.nodes || [];
-        const edges = json.edges || [];
-        drawRooms(rooms);
-        findPoint(rooms, nodes, edges)
-        console.log("rooms :", rooms);
-        console.log("nodes ;", nodes);
-        console.log("edges :", edges);
-        return { rooms, nodes, edges };
+        mapRooms = json.rooms || [];
+        mapNodes = json.nodes || [];
+        mapEdges = json.edges || [];
+        drawRooms(mapRooms);
+        // findPoint(mapRooms, mapNodes, mapEdges, "A - 213", "C - 210"); // Initial call removed
+        return { rooms: mapRooms, nodes: mapNodes, edges: mapEdges };
     } catch (err) {
         console.error("Failed to load JSON : ", err);
     }
@@ -35,6 +38,27 @@ function drawRooms(rooms) {
         allpoints.push(...converted);
         const polygon = L.polygon(converted, { color: 'green', weight: 2 }).addTo(map);
         polygon.bindPopup(room.name || "Unnamed Room");
+
+        // Calculate centroid for label position
+        let centroidX = 0;
+        let centroidY = 0;
+        room.coordinates.forEach(coord => {
+            centroidX += coord.x;
+            centroidY += coord.y;
+        });
+        centroidX /= room.coordinates.length;
+        centroidY /= room.coordinates.length;
+
+        // Create a label with adjusted styling
+        const label = L.divIcon({
+            className: 'room-label',
+            html: `<div style="font-size: 12px; color: #333; background-color: rgba(255, 255, 255, 0.23); padding: 3px 10px; border: 0px solid #999; border-radius: 10px; text-align: center;">${room.name}</div>`,
+            iconSize: [80, 20], // Adjust size as needed
+            iconAnchor: [40, 10] // Center the label
+        });
+
+        // Add the label to the map
+        L.marker([centroidX, centroidY], { icon: label }).addTo(map);
     });
 
     if (allpoints.length) {
@@ -42,7 +66,6 @@ function drawRooms(rooms) {
         map.fitBounds(bounds);
     }
 }
-
 function distanceSq(p1, p2) {
     return (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2;
 }
@@ -66,14 +89,26 @@ let destParallelPoint;
 let nearest1ResultGlobal;
 let nearest2ResultGlobal;
 
-function findPoint(rooms, nodes, edges) {
-    let sourceRoomName = "A-205";
-    let destRoomName = "B - 209";
+function findPoint(rooms, nodes, edges, sourceRoomName, destRoomName) {
+    // Remove previous markers if they exist
+    if (sourceCentroidMarker) {
+        map.removeLayer(sourceCentroidMarker);
+    }
+    if (destCentroidMarker) {
+        map.removeLayer(destCentroidMarker);
+    }
+    if (sourceParallelMarker) {
+        map.removeLayer(sourceParallelMarker);
+    }
+    if (destParallelMarker) {
+        map.removeLayer(destParallelMarker);
+    }
+
     const sRoom = rooms.find((room) => { return room.name === sourceRoomName });
     const dRoom = rooms.find((room) => { return room.name === destRoomName });
-    console.log("Source Room:", sRoom, "Destination Room:", dRoom);
+    // console.log("Source Room:", sRoom, "Destination Room:", dRoom);
     if (!sRoom || !dRoom) {
-        console.log("Source or Destination not found!");
+        alert("Source or Destination room not found!");
         return;
     }
 
@@ -84,7 +119,7 @@ function findPoint(rooms, nodes, edges) {
     }, { x: 0, y: 0 });
     centroid1.x /= sRoom.coordinates.length;
     centroid1.y /= sRoom.coordinates.length;
-    console.log("Centroid 1:", centroid1.x, centroid1.y);
+    // console.log("Centroid 1:", centroid1.x, centroid1.y);
 
     const centroid2 = dRoom.coordinates.reduce((acc, point) => {
         acc.x += point.x;
@@ -93,15 +128,15 @@ function findPoint(rooms, nodes, edges) {
     }, { x: 0, y: 0 });
     centroid2.x /= dRoom.coordinates.length;
     centroid2.y /= dRoom.coordinates.length;
-    console.log("Centroid 2:", centroid2.x, centroid2.y);
+    // console.log("Centroid 2:", centroid2.x, centroid2.y);
 
-    L.circleMarker([centroid1.x, centroid1.y], {
+    sourceCentroidMarker = L.circleMarker([centroid1.x, centroid1.y], {
         radius: 6,
         color: 'red',
         fillOpacity: 1
     }).addTo(map);
 
-    L.circleMarker([centroid2.x, centroid2.y], {
+    destCentroidMarker = L.circleMarker([centroid2.x, centroid2.y], {
         radius: 6,
         color: 'blue',
         fillOpacity: 1
@@ -163,29 +198,31 @@ function findPoint(rooms, nodes, edges) {
     };
 
     nearest1ResultGlobal = findNearestEdgeAndParallelPoint(centroid1);
-    console.log("Nearest to Centroid 1:", nearest1ResultGlobal);
+    // console.log("Nearest to Centroid 1:", nearest1ResultGlobal);
     if (nearest1ResultGlobal.edge && nearest1ResultGlobal.nodes && nearest1ResultGlobal.parallelPoint) {
-        console.log("Nearest Edge Nodes (Centroid 1):", nearest1ResultGlobal.nodes.source.id, nearest1ResultGlobal.nodes.target.id);
-        console.log("Parallel Point (Centroid 1):", nearest1ResultGlobal.parallelPoint);
-        L.circleMarker([nearest1ResultGlobal.parallelPoint.x, nearest1ResultGlobal.parallelPoint.y], {
+        // console.log("Nearest Edge Nodes (Centroid 1):", nearest1ResultGlobal.nodes.source.id, nearest1ResultGlobal.nodes.target.id);
+        // console.log("Parallel Point (Centroid 1):", nearest1ResultGlobal.parallelPoint);
+        sourceParallelMarker = L.circleMarker([nearest1ResultGlobal.parallelPoint.x, nearest1ResultGlobal.parallelPoint.y], {
             radius: 4,
             color: 'lime',
             fillOpacity: 1
-        }).addTo(map).bindPopup(`Parallel point to ${sourceRoomName}`);
+        }).addTo(map);
+        // .bindPopup(`Parallel point to ${sourceRoomName}`);
         sourceNearestNodes = nearest1ResultGlobal.nodes;
         sourceParallelPoint = nearest1ResultGlobal.parallelPoint;
     }
 
     nearest2ResultGlobal = findNearestEdgeAndParallelPoint(centroid2);
-    console.log("Nearest to Centroid 2:", nearest2ResultGlobal);
+    // console.log("Nearest to Centroid 2:", nearest2ResultGlobal);
     if (nearest2ResultGlobal.edge && nearest2ResultGlobal.nodes && nearest2ResultGlobal.parallelPoint) {
-        console.log("Nearest Edge Nodes (Centroid 2):", nearest2ResultGlobal.nodes.source.id, nearest2ResultGlobal.nodes.target.id);
-        console.log("Parallel Point (Centroid 2):", nearest2ResultGlobal.parallelPoint);
-        L.circleMarker([nearest2ResultGlobal.parallelPoint.x, nearest2ResultGlobal.parallelPoint.y], {
+        // console.log("Nearest Edge Nodes (Centroid 2):", nearest2ResultGlobal.nodes.source.id, nearest2ResultGlobal.nodes.target.id);
+        // console.log("Parallel Point (Centroid 2):", nearest2ResultGlobal.parallelPoint);
+        destParallelMarker = L.circleMarker([nearest2ResultGlobal.parallelPoint.x, nearest2ResultGlobal.parallelPoint.y], {
             radius: 4,
             color: 'cyan',
             fillOpacity: 1
-        }).addTo(map).bindPopup(`Parallel point to ${destRoomName}`);
+        }).addTo(map);
+        // .bindPopup(`Parallel point to ${destRoomName}`);
         destNearestNodes = nearest2ResultGlobal.nodes;
         destParallelPoint = nearest2ResultGlobal.parallelPoint;
     }
@@ -320,7 +357,7 @@ function findShortestPathBetweenParallelPoints(allNodes, allEdges, startNearestR
     }
 
     if (shortestPath && bestStartNode && bestEndNode) {
-        console.log("Shortest Path Nodes between parallel points:", shortestPath);
+        // console.log("Shortest Path Nodes between parallel points:", shortestPath);
         drawPathFromParallelPoints(startPoint, shortestPath, endPoint, nodes, bestStartNode, bestEndNode);
     } else {
         console.log("No path found between the nearest edge nodes.");
@@ -331,6 +368,10 @@ function drawPathFromParallelPoints(startPoint, pathNodes, endPoint, allNodes, s
     if (!pathNodes) {
         console.log("No path to draw.");
         return;
+    }
+
+    if (routeLayer) {
+        map.removeLayer(routeLayer);
     }
 
     const pathCoordinates = [];
@@ -348,8 +389,21 @@ function drawPathFromParallelPoints(startPoint, pathNodes, endPoint, allNodes, s
     pathCoordinates.push([endPoint.x, endPoint.y]);
 
     if (pathCoordinates.length > 1) {
-        L.polyline(pathCoordinates, { color: 'red', weight: 5 }).addTo(map).bindPopup("Shortest Path");
+        routeLayer = L.polyline(pathCoordinates, { color: 'red', weight: 5 }).addTo(map);
+        // .bindPopup("Shortest Path");
     } else {
         console.log("Not enough coordinates to draw the path.");
     }
+}
+
+function handleGo() {
+    const sourceRoomName = document.getElementById("sourceRoomInput").value.trim();
+    const destRoomName = document.getElementById("destinationRoomInput").value.trim();
+
+    if (!sourceRoomName || !destRoomName) {
+        alert("Please enter both source and destination room names.");
+        return;
+    }
+
+    findPoint(mapRooms, mapNodes, mapEdges, sourceRoomName, destRoomName);
 }

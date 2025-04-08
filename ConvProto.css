@@ -1,98 +1,63 @@
-* {
+/* General layout */
+html, body {
+  height: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden; /* Prevent scrollbars */
+  font-family: sans-serif;
+  background-color: #f4f4f4;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top input + button section */
+.controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between; /* Equal space */
+  width: 100%;
+  padding: 16px;
+  gap: 10px;
   box-sizing: border-box;
-  font-family: Arial, sans-serif;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 1000;
 }
 
-body {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  height: 100vh;
-  background: #f4f4f4;
-}
-
-header {
-  width: 100%;
-  background: #007BFF;
-  color: white;
-  padding: 10px 20px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.search-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-}
-
-.search-container input, .search-container button {
-  padding: 8px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  width: 45%;
-  min-width: 120px;
-}
-
-.search-container button {
-  background: #0056b3;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-
-.map-container {
-  width: 100%;
-  height: calc(100vh - 100px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ffffff;
-  overflow: hidden;
-}
-
-canvas {
-  max-width: 100%;
-  max-height: 100%;
-  background: #ffffff;
-}
-
-.movement-controls {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: rgba(255, 255, 255, 0.8);
+/* Individual input fields */
+.controls input[type="text"] {
+  flex: 1;
   padding: 10px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
 }
 
-.movement-controls button {
-  width: 40px;
-  height: 40px;
+/* GO button */
+.controls button {
+  background-color: #007bff;
+  color: white;
+  padding: 12px 20px;
   border: none;
-  background: #f0f0f0;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 18px;
-  transition: background 0.2s;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
 }
 
-@media (max-width: 768px) {
-  .search-container {
-      flex-direction: column;
-      width: 100%;
-  }
-  .search-container input, .search-container button {
-      width: 90%;
-  }
+.controls button:hover {
+  background-color: #0056b3;
+}
+
+/* Map takes remaining space */
+#map {
+  flex: 1;
+  width: 100%;
+}
+
+/* Optional container padding if needed */
+.container {
+  padding-right: 30%;
 }

@@ -3,7 +3,7 @@
     "referenceScaleFactor": 100,
     "rooms": [
       {
-        "name": "A-205",
+        "name": "A - 205",
         "type": "room",
         "coordinates": [
           {
@@ -25,7 +25,7 @@
         ]
       },
       {
-        "name": "A-204",
+        "name": "A - 204",
         "type": "room",
         "coordinates": [
           {
@@ -47,7 +47,7 @@
         ]
       },
       {
-        "name": "A-203",
+        "name": "A - 203",
         "type": "room",
         "coordinates": [
           {
@@ -91,7 +91,7 @@
         ]
       },
       {
-        "name": "A-202",
+        "name": "A - 202",
         "type": "room",
         "coordinates": [
           {
@@ -113,7 +113,7 @@
         ]
       },
       {
-        "name": "A-201",
+        "name": "A - 201",
         "type": "room",
         "coordinates": [
           {
@@ -673,7 +673,7 @@
         ]
       },
       {
-        "name": "B -212",
+        "name": "B - 212",
         "type": "room",
         "coordinates": [
           {
@@ -977,7 +977,7 @@
         ]
       },
       {
-        "name": "A -207",
+        "name": "A - 207",
         "type": "room",
         "coordinates": [
           {
@@ -1470,16 +1470,6 @@
             "x": 106000,
             "y": 268000
           },
-          {
-            "x": 85000,
-            "y": 268000
-          }
-        ]
-      },
-      {
-        "name": "C - 210",
-        "type": "room",
-        "coordinates": [
           {
             "x": 85000,
             "y": 268000

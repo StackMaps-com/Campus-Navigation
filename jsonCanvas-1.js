@@ -6,6 +6,7 @@ const referenceScaleInput = document.getElementById("referenceScale");
 const jsonOutput = document.getElementById("jsonOutput");
 const toolButtons = document.querySelectorAll("#toolControls .tool-button");
 
+
 let shapes = []; // Represents rooms
 let currentShape = null;
 let isDrawing = false;
@@ -60,22 +61,22 @@ imageUpload.addEventListener("change", function (event) {
 // -------------------------
 // Load JSON Functionality
 // -------------------------
-// const loadJSONFileInput = document.createElement('input'); // Create the input element in JS
-// loadJSONFileInput.type = 'file';
-// loadJSONFileInput.id = 'loadJSONFile';
-// loadJSONFileInput.accept = '.json';
-// loadJSONFileInput.style.display = 'none'; // Hide it
-// document.body.appendChild(loadJSONFileInput); // Append to the body (or any other container)
+const loadJSONFileInput = document.createElement('input'); // Create the input element in JS
+loadJSONFileInput.type = 'file';
+loadJSONFileInput.id = 'loadJSONFile';
+loadJSONFileInput.accept = '.json';
+loadJSONFileInput.style.display = 'none'; // Hide it
+document.body.appendChild(loadJSONFileInput); // Append to the body (or any other container)
 
-// const openJSONButton = document.createElement('button');
-// openJSONButton.textContent = 'Open JSON';
-// openJSONButton.onclick = () => loadJSONFileInput.click();
-// const controlsDiv = document.getElementById('controls'); // Assuming you have a div with id="controls" in your HTML
-// if (controlsDiv) {
-//     controlsDiv.appendChild(openJSONButton);
-// } else {
-//     console.error("Error: 'controls' div not found in HTML to append 'Open JSON' button.");
-// }
+const openJSONButton = document.createElement('button');
+openJSONButton.textContent = 'Open JSON';
+openJSONButton.onclick = () => loadJSONFileInput.click();
+const controlsDiv = document.getElementById('controls'); // Assuming you have a div with id="controls" in your HTML
+if (controlsDiv) {
+    controlsDiv.appendChild(openJSONButton);
+} else {
+    console.error("Error: 'controls' div not found in HTML to append 'Open JSON' button.");
+}
 
 
 loadJSONFileInput.addEventListener("change", function (event) {
