@@ -7,6 +7,7 @@ var map = L.map('map', {
     attributionControl : false
 });
 
+let originalMapData = null; // To store the initially loaded map data
 let mapRooms = [], mapNodes = [], mapEdges = [];
 let routeLayer = null;
 let sourceCentroidMarker; // To store the source centroid marker
@@ -16,8 +17,9 @@ let destParallelMarker;   // To store the destination parallel point marker
 
 async function loadMapData() {
     try {
-        const response = await fetch("new.json");
+        const response = await fetch("floorplan.json");
         const json = await response.json();
+        originalMapData = json; // Store the original data
         mapRooms = json.rooms || [];
         mapNodes = json.nodes || [];
         mapEdges = json.edges || [];
@@ -65,8 +67,138 @@ function drawRooms(rooms) {
     if (allpoints.length) {
         const bounds = L.latLngBounds(allpoints)
         map.fitBounds(bounds);
+    } else {
+        // Set a default view if no rooms are loaded
+        map.setView([0, 0], 0);
     }
 }
+
+function addEnterKeyListener() {
+    const sourceInput = document.getElementById("sourceRoomInput");
+    const destinationInput = document.getElementById("destinationRoomInput");
+    const goButton = document.querySelector('.controls button'); // Assuming the "Go" button is the one to trigger
+
+    if (sourceInput) {
+        sourceInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (goButton) {
+                    goButton.click();
+                }
+            }
+        });
+    }
+
+    if (destinationInput) {
+        destinationInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (goButton) {
+                    goButton.click();
+                }
+            }
+        });
+    }
+}
+
+// Add rotation buttons and their event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const controlsDiv = document.querySelector('.controls');
+    const rotateLeftButton = document.createElement('button');
+    rotateLeftButton.textContent = 'Rotate Left';
+    rotateLeftButton.onclick = rotateLeft;
+
+    const rotateRightButton = document.createElement('button');
+    rotateRightButton.textContent = 'Rotate Right';
+    rotateRightButton.onclick = rotateRight;
+
+    controlsDiv.appendChild(rotateLeftButton);
+    controlsDiv.appendChild(rotateRightButton);
+});
+
+function getMapCenter() {
+    let totalX = 0;
+    let totalY = 0;
+    let totalPoints = 0;
+    mapRooms.forEach(room => {
+        room.coordinates.forEach(coord => {
+            totalX += coord.x;
+            totalY += coord.y;
+            totalPoints++;
+        });
+    });
+    return { x: totalX / totalPoints, y: totalY / totalPoints };
+}
+
+function rotatePoint(point, center, angleRad) {
+    const s = Math.sin(angleRad);
+    const c = Math.cos(angleRad);
+
+    // Translate point back to origin
+    const px = point.x - center.x;
+    const py = point.y - center.y;
+
+    // Rotate point
+    const newX = px * c - py * s;
+    const newY = px * s + py * c;
+
+    // Translate point back
+    return { x: newX + center.x, y: newY + center.y };
+}
+
+function rotateMap(angleDegrees) {
+    if (!originalMapData) return;
+
+    const angleRad = angleDegrees * Math.PI / 180;
+    const center = getMapCenter();
+
+    // Create deep copies to avoid modifying the original data directly
+    const rotatedRooms = originalMapData.rooms.map(room => ({
+        ...room,
+        coordinates: room.coordinates.map(coord => rotatePoint(coord, center, angleRad))
+    }));
+
+    const rotatedNodes = originalMapData.nodes.map(node => ({
+        ...node,
+        coordinates: node.coordinates ? rotatePoint(node.coordinates, center, angleRad) : null
+    }));
+
+    const rotatedEdges = originalMapData.edges.map(edge => ({
+        ...edge
+    }));
+
+    mapRooms = rotatedRooms;
+    mapNodes = rotatedNodes;
+    mapEdges = rotatedEdges;
+
+    redrawMap(mapRooms);
+}
+
+function rotateLeft() {
+    rotateMap(-90);
+}
+
+function rotateRight() {
+    rotateMap(90);
+}
+
+function redrawMap(roomsToDraw) {
+    map.eachLayer(function (layer) {
+        if (layer instanceof L.Polygon || layer instanceof L.Marker) {
+            map.removeLayer(layer);
+        }
+    });
+    drawRooms(roomsToDraw);
+    if (routeLayer) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+        if (sourceCentroidMarker) map.removeLayer(sourceCentroidMarker);
+        if (destCentroidMarker) map.removeLayer(destCentroidMarker);
+        if (sourceParallelMarker) map.removeLayer(sourceParallelMarker);
+        if (destParallelMarker) map.removeLayer(destParallelMarker);
+    }
+}
+
 function distanceSq(p1, p2) {
     return (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2;
 }
@@ -481,32 +613,3 @@ function handleGo() {
 
     findPoint(mapRooms, mapNodes, mapEdges, sourceRoomName, destRoomName);
 }
-
-function addEnterKeyListener() {
-    const sourceInput = document.getElementById("sourceRoomInput");
-    const destinationInput = document.getElementById("destinationRoomInput");
-    const goButton = document.querySelector('button'); // Assuming there's only one button
-
-    if (sourceInput) {
-        sourceInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                if (goButton) {
-                    goButton.click();
-                }
-            }
-        });
-    }
-
-    if (destinationInput) {
-        destinationInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                if (goButton) {
-                    goButton.click();
-                }
-            }
-        });
-    }
-}
-

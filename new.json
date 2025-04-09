@@ -1558,7 +1558,8 @@
         "coordinates": {
           "x": 80900,
           "y": 21375
-        }
+        },
+        "alias" : ["new node"]
       },
       {
         "id": "node-2",

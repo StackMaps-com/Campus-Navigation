@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>JSON File Flipper & Rotator</title>
+<style>
+  body { font-family: sans-serif; }
+  #output { margin-top: 20px; border: 1px solid #ccc; padding: 10px; white-space: pre-wrap; }
+  .button-group button { margin-right: 5px; }
+</style>
+</head>
+<body>
+
+  <h1>JSON File Flipper & Rotator</h1>
+
+  <input type="file" id="fileInput">
+  <br><br>
+
+  <div class="button-group">
+    <button id="flipRight">Flip Right</button>
+    <button id="flipLeft">Flip Left</button>
+  </div>
+  <br>
+  <div class="button-group">
+    <button id="invert">Invert</button>
+  </div>
+  <br>
+  <div class="button-group">
+    <button id="rotateLeft">Rotate Left</button>
+    <button id="rotateRight">Rotate Right</button>
+  </div>
+  <br>
+  <button id="exportButton" disabled>Export Flipped/Rotated JSON</button>
+  <br><br>
+
+  <h2>Original Data:</h2>
+  <div id="originalOutput" style="max-height: 200px; overflow-y: auto;"></div>
+
+  <h2>Flipped/Rotated Data:</h2>
+  <div id="output" style="max-height: 200px; overflow-y: auto;"></div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const flipRightButton = document.getElementById('flipRight');
+    const flipLeftButton = document.getElementById('flipLeft');
+    const invertButton = document.getElementById('invert');
+    const rotateLeftButton = document.getElementById('rotateLeft');
+    const rotateRightButton = document.getElementById('rotateRight');
+    const exportButton = document.getElementById('exportButton');
+    const originalOutputDiv = document.getElementById('originalOutput');
+    const outputDiv = document.getElementById('output');
+
+    let jsonData = null;
+    let originalData = null;
+
+    fileInput.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            jsonData = JSON.parse(e.target.result);
+            originalData = JSON.parse(JSON.stringify(jsonData));
+            displayOriginalData(originalData);
+            outputDiv.textContent = '';
+            exportButton.disabled = true;
+          } catch (error) {
+            outputDiv.textContent = 'Error parsing JSON file.';
+            console.error('Error parsing JSON:', error);
+            jsonData = null;
+            originalData = null;
+            exportButton.disabled = true;
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        outputDiv.textContent = 'No file selected.';
+        jsonData = null;
+        originalData = null;
+        exportButton.disabled = true;
+      }
+    });
+
+    function displayOriginalData(data) {
+      originalOutputDiv.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function transformCoordinates(rooms, transformation) {
+      if (!rooms) return;
+
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+
+      for (const room of rooms) {
+        if (room.coordinates && Array.isArray(room.coordinates)) {
+          for (const coord of room.coordinates) {
+            minX = Math.min(minX, coord.x);
+            maxX = Math.max(maxX, coord.x);
+            minY = Math.min(minY, coord.y);
+            maxY = Math.max(maxY, coord.y);
+          }
+        }
+      }
+
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      for (const room of rooms) {
+        if (room.coordinates && Array.isArray(room.coordinates)) {
+          for (const coord of room.coordinates) {
+            switch (transformation) {
+              case 'flipRight':
+                coord.x = Math.round(2 * maxX - coord.x);
+                break;
+              case 'flipLeft':
+                coord.x = Math.round(2 * minX - coord.x);
+                break;
+              case 'invert':
+                const originalX = coord.x;
+                coord.x = Math.round(2 * centerX - originalX);
+                coord.y = Math.round(2 * centerY - coord.y);
+                break;
+              case 'rotateLeft':
+                const originalX_rl = coord.x - centerX;
+                const originalY_rl = coord.y - centerY;
+                coord.x = Math.round(centerX - originalY_rl);
+                coord.y = Math.round(centerY + originalX_rl);
+                break;
+              case 'rotateRight':
+                const originalX_rr = coord.x - centerX;
+                const originalY_rr = coord.y - centerY;
+                coord.x = Math.round(centerX + originalY_rr);
+                coord.y = Math.round(centerY - originalX_rr);
+                break;
+            }
+          }
+        }
+      }
+    }
+
+    function applyTransformation(transformation) {
+      if (jsonData && jsonData.rooms) {
+        const clonedData = JSON.parse(JSON.stringify(jsonData));
+        transformCoordinates(clonedData.rooms, transformation);
+        jsonData = clonedData;
+        outputDiv.textContent = JSON.stringify(jsonData, null, 2);
+        exportButton.disabled = false;
+      } else {
+        outputDiv.textContent = 'Please upload a JSON file first.';
+      }
+    }
+
+    flipRightButton.addEventListener('click', () => applyTransformation('flipRight'));
+    flipLeftButton.addEventListener('click', () => applyTransformation('flipLeft'));
+    invertButton.addEventListener('click', () => applyTransformation('invert'));
+    rotateLeftButton.addEventListener('click', () => applyTransformation('rotateLeft'));
+    rotateRightButton.addEventListener('click', () => applyTransformation('rotateRight'));
+
+    exportButton.addEventListener('click', function() {
+      if (jsonData) {
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'transformed_data.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        outputDiv.textContent = 'Please load and transform the JSON data first.';
+      }
+    });
+  </script>
+
+</body>
+</html>
