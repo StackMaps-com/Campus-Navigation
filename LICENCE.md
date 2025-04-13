@@ -16,6 +16,9 @@ This repository is made available for **viewing purposes only**.
 Any unauthorized use of this repository may result in **legal action** under applicable copyright laws, DMCA takedown requests, and GitHub policy enforcement.  
 
 For special permissions, please contact vamsikrishnamallupeddi22@gmail.com / 8977500669.
+For special permissions, please contact gorlakeerthi2205@gmail.com / 9390090945.
+
+
 
 Thankyou.
 
