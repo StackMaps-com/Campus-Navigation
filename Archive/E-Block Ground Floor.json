@@ -717,7 +717,7 @@
       ]
     },
     {
-      "name": "LIFT",
+      "name": "LIFT 1",
       "type": "room",
       "coordinates": [
         {
@@ -777,7 +777,7 @@
       ]
     },
     {
-      "name": "LIFT",
+      "name": "LIFT 2",
       "type": "room",
       "coordinates": [
         {
@@ -833,7 +833,7 @@
       ]
     },
     {
-      "name": "LIFT",
+      "name": "LIFT 3",
       "type": "room",
       "coordinates": [
         {
@@ -1163,7 +1163,7 @@
       ]
     },
     {
-      "name": "LIFT",
+      "name": "LIFT 6",
       "type": "room",
       "coordinates": [
         {
@@ -1253,7 +1253,7 @@
       ]
     },
     {
-      "name": "LIFT",
+      "name": "LIFT 7",
       "type": "room",
       "coordinates": [
         {
@@ -1313,7 +1313,7 @@
       ]
     },
     {
-      "name": "LIFT",
+      "name": "LIFT 8",
       "type": "room",
       "coordinates": [
         {
