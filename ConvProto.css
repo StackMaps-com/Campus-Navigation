@@ -163,3 +163,44 @@ body {
     font-size: 18px; /* Further reduce zoom button font size */
   }
 }
+/* Style for dropdown */
+.controls select.floor-selector {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: white;
+  color: #333;
+  appearance: none; /* Remove default OS styling */
+  flex: 0.5;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Focus and hover effect */
+.controls select.floor-selector:hover,
+.controls select.floor-selector:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px #007bff33;
+  outline: none;
+}
+
+/* Arrow customization for consistent cross-browser styling */
+.controls select.floor-selector::-ms-expand {
+  display: none; /* Remove default arrow in IE */
+}
+@media (max-width: 768px) {
+  .controls select.floor-selector {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .controls select.floor-selector {
+    font-size: 12px;
+    padding: 6px;
+  }
+}
