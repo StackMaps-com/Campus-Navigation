@@ -3,4 +3,4 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/keerthigorla22/Campus-Navigation)
 ![GitHub repo size](https://img.shields.io/github/repo-size/keerthigorla22/Campus-Navigation)
 # Deployment Link
-[Link text]([text](https://stack-maps-dbug.vercel.app/))
+[Live Demo](https://stack-maps-dbug.vercel.app/)
