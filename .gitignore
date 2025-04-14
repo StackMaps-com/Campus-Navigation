@@ -1,1 +1,12 @@
+# macOS
 .DS_Store
+
+# VSCode
+.vscode/
+
+# Archives
+*.zip
+
+# Python
+__pycache__/
+*.pyc
