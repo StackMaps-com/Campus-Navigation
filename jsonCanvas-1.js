@@ -238,20 +238,27 @@ function calculateDistance(coord1, coord2) {
 // -------------------------
 // Canvas Click Handler
 // -------------------------
-canvas.addEventListener("click", function (event) {
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+let dragPoint = null;
+let dragShape = null;
 
-    if (currentTool === 'drawRoom') {
-        handleDrawRoomClick(event);
-    } else if (currentTool === 'placeNode') {
-        addNode(x, y);
-    } else if (currentTool === 'connectEdge') {
-        const clickedNode = findClickedNode(x, y);
-        if (clickedNode) {
-            startConnectNodes(clickedNode.id);
+canvas.addEventListener("mousedown", function (e) {
+    if (currentTool !== "drawRoom") {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        for (const shape of shapes) {
+            for (let i = 0; i < shape.points.length; i++) {
+                const pt = shape.points[i];
+                if (Math.hypot(pt.x - x, pt.y - y) < 8) {
+                    dragPoint = i;
+                    dragShape = shape;
+                    return;
+                }
+            }
         }
+    } else {
+        handleDrawRoomClick(e);
     }
 });
 
@@ -289,10 +296,17 @@ function findClickedNode(x, y) {
 // -------------------------
 // Mouse Move – Draw Preview Line (for Room Drawing)
 // -------------------------
-canvas.addEventListener("mousemove", function (event) {
-    if (currentTool === 'drawRoom' && isDrawing && currentShape.points.length > 0) {
-        let x = event.offsetX;
-        let y = event.offsetY;
+canvas.addEventListener("mousemove", function (e) {
+    if (dragPoint !== null && dragShape) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        dragShape.points[dragPoint] = { x, y };
+        redrawCanvas();
+        updateJsonOutput();
+    } else if (currentTool === 'drawRoom' && isDrawing && currentShape.points.length > 0) {
+        let x = e.offsetX;
+        let y = e.offsetY;
 
         ({ x, y } = getSnappedPoint(x, y));
 
@@ -348,20 +362,25 @@ function redrawCanvas() {
     if (image.src) {
         ctx.drawImage(image, 0, 0);
     }
-    // Draw Shapes (Rooms)
+    // Draw Shapes with Shared Edge Deduplication
+    const seenEdges = new Set();
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 2;
+
     shapes.forEach(shape => {
-        ctx.beginPath();
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
-        shape.points.forEach((point, index) => {
-            if (index === 0) {
-                ctx.moveTo(point.x, point.y);
-            } else {
-                ctx.lineTo(point.x, point.y);
+        for (let i = 0; i < shape.points.length; i++) {
+            const a = shape.points[i];
+            const b = shape.points[(i + 1) % shape.points.length];
+            const edgeKey = `${Math.min(a.x, b.x)},${Math.min(a.y, b.y)}-${Math.max(a.x, b.x)},${Math.max(a.y, b.y)}`;
+
+            if (!seenEdges.has(edgeKey)) {
+                seenEdges.add(edgeKey);
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.stroke();
             }
-        });
-        ctx.closePath(); // Ensure the shape is closed
-        ctx.stroke();
+        }
     });
 
     // Draw Nodes

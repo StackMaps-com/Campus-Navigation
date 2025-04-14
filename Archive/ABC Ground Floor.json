@@ -1,6 +1,8 @@
 {
+  "name" : "ABC Ground Floor",
   "originalScaleFactor": 1,
   "referenceScaleFactor": 100,
+
   "rooms": [
     {
       "name": "A-005",

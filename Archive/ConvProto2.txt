@@ -7,8 +7,7 @@ var map = L.map('map', {
     attributionControl : false
 });
 
-let allMapData = {}; // To store map data for all floors
-let currentFloor = null;
+let originalMapData = null; // To store the initially loaded map data
 let mapRooms = [], mapNodes = [], mapEdges = [];
 let routeLayer = null;
 let sourceCentroidMarker; // To store the source centroid marker
@@ -18,27 +17,35 @@ let destParallelMarker;   // To store the destination parallel point marker
 
 async function loadMapData() {
     try {
-        const floorNames = ["ABC Ground Floor.json", "ABC Second Floor.json"]; // Simulate loading multiple files
-        for (const floorFile of floorNames) {
-            const response = await fetch(floorFile);
-            const json = await response.json();
-            const floorplanName = json.name || "Floorplan";
-            allMapData[floorplanName] = json;
-        }
+        const response = await fetch("ABC Ground Floor.json");
+        const json = await response.json();
+        originalMapData = json; // Store the original data
+        mapRooms = json.rooms || [];
+        mapNodes = json.nodes || [];
+        mapEdges = json.edges || [];
 
-        // Set the initial floor to the first one loaded (e.g., Ground Floor)
-        const firstFloorName = Object.keys(allMapData)[0];
-        if (firstFloorName) {
-            currentFloor = firstFloorName;
-            const currentFloorData = allMapData[currentFloor];
-            mapRooms = currentFloorData.rooms || [];
-            mapNodes = currentFloorData.nodes || [];
-            mapEdges = currentFloorData.edges || [];
-            drawRooms(mapRooms, mapNodes, currentFloor);
-            updateFloorSelector();
-        }
+        const floorplanName = json.name || "Floorplan"; // Assuming there's a 'name' property
 
+        drawRooms(mapRooms, mapNodes, floorplanName); // Pass floorplanName to drawRooms
         addEnterKeyListener();
+
+        // Update the instruction text here, right after drawRooms
+        const floorplanNameInstructionSpan = document.getElementById('floorplan-name-instruction');
+        if (floorplanNameInstructionSpan) {
+            // Simple formatting: capitalize each word
+            const formattedName = floorplanName.split(/[\s_-]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+            floorplanNameInstructionSpan.textContent = formattedName;
+            console.log("Floorplan Name displayed:", formattedName); // Added log for confirmation
+        } else {
+            console.log("floorplanNameInstructionSpan element NOT found.");
+        }
+
+        // Check for orientation property and rotate accordingly (keep this if needed)
+        if (json.orientation === "right") {
+            rotateRight();
+        } else if (json.orientation === "left") {
+            rotateLeft();
+        }
 
         return { rooms: mapRooms, nodes: mapNodes, edges: mapEdges };
     } catch (err) {
@@ -47,47 +54,7 @@ async function loadMapData() {
 }
 loadMapData();
 
-function updateFloorSelector() {
-    const floorSelector = document.getElementById('floor-selector');
-    if (floorSelector) {
-        floorSelector.innerHTML = ''; // Clear previous options
-        for (const floorName in allMapData) {
-            const option = document.createElement('option');
-            option.value = floorName;
-            option.textContent = floorName;
-            if (floorName === currentFloor) {
-                option.selected = true;
-            }
-            floorSelector.appendChild(option);
-        }
-        floorSelector.onchange = switchFloor;
-    } else {
-        console.log("floor-selector element NOT found.");
-    }
-}
-
-function switchFloor() {
-    const floorSelector = document.getElementById('floor-selector');
-    if (floorSelector) {
-        const selectedFloor = floorSelector.value;
-        if (selectedFloor && allMapData[selectedFloor]) {
-            currentFloor = selectedFloor;
-            const currentFloorData = allMapData[currentFloor];
-            mapRooms = currentFloorData.rooms || [];
-            mapNodes = currentFloorData.nodes || [];
-            mapEdges = currentFloorData.edges || [];
-            redrawMap(mapRooms, mapNodes, currentFloor);
-        }
-    }
-}
-
 function drawRooms(rooms, nodes, floorplanName) {
-    map.eachLayer(function (layer) {
-        if (!(layer instanceof L.TileLayer)) { // Keep the base tile layer if any
-            map.removeLayer(layer);
-        }
-    });
-
     const allpoints = [];
     const entranceIcon = L.divIcon({
         className: 'entrance-icon',
@@ -199,11 +166,26 @@ function addEnterKeyListener() {
     }
 }
 
-function getMapCenter(rooms) {
+// Add rotation buttons and their event listeners
+// document.addEventListener('DOMContentLoaded', function() {
+//     const controlsDiv = document.querySelector('.controls');
+//     const rotateLeftButton = document.createElement('button');
+//     rotateLeftButton.textContent = 'Rotate Left';
+//     rotateLeftButton.onclick = rotateLeft;
+
+//     const rotateRightButton = document.createElement('button');
+//     rotateRightButton.textContent = 'Rotate Right';
+//     rotateRightButton.onclick = rotateRight;
+
+//     controlsDiv.appendChild(rotateLeftButton);
+//     controlsDiv.appendChild(rotateRightButton);
+// });
+
+function getMapCenter() {
     let totalX = 0;
     let totalY = 0;
     let totalPoints = 0;
-    rooms.forEach(room => {
+    mapRooms.forEach(room => {
         room.coordinates.forEach(coord => {
             totalX += coord.x;
             totalY += coord.y;
@@ -230,33 +212,31 @@ function rotatePoint(point, center, angleRad) {
 }
 
 function rotateMap(angleDegrees) {
-    if (!allMapData[currentFloor]) return;
+    if (!originalMapData) return;
 
     const angleRad = angleDegrees * Math.PI / 180;
-    const center = getMapCenter(allMapData[currentFloor].rooms);
-    const currentMapData = allMapData[currentFloor];
+    const center = getMapCenter();
 
     // Create deep copies to avoid modifying the original data directly
-    const rotatedRooms = currentMapData.rooms.map(room => ({
+    const rotatedRooms = originalMapData.rooms.map(room => ({
         ...room,
         coordinates: room.coordinates.map(coord => rotatePoint(coord, center, angleRad))
     }));
 
-    const rotatedNodes = currentMapData.nodes.map(node => ({
+    const rotatedNodes = originalMapData.nodes.map(node => ({
         ...node,
         coordinates: node.coordinates ? rotatePoint(node.coordinates, center, angleRad) : null
     }));
 
-    const rotatedEdges = currentMapData.edges.map(edge => ({
+    const rotatedEdges = originalMapData.edges.map(edge => ({
         ...edge
     }));
 
-    allMapData[currentFloor] = { ...currentMapData, rooms: rotatedRooms, nodes: rotatedNodes, edges: rotatedEdges };
     mapRooms = rotatedRooms;
     mapNodes = rotatedNodes;
     mapEdges = rotatedEdges;
 
-    redrawMap(mapRooms, mapNodes, currentFloor);
+    redrawMap(mapRooms);
 }
 
 function rotateLeft() {
@@ -267,13 +247,13 @@ function rotateRight() {
     rotateMap(90);
 }
 
-function redrawMap(roomsToDraw, nodesToDraw, floorName) {
+function redrawMap(roomsToDraw) {
     map.eachLayer(function (layer) {
-        if (!(layer instanceof L.TileLayer)) {
+        if (layer instanceof L.Polygon || layer instanceof L.Marker) {
             map.removeLayer(layer);
         }
     });
-    drawRooms(roomsToDraw, nodesToDraw, floorName);
+    drawRooms(roomsToDraw, mapNodes, document.getElementById('map-title')?.textContent?.replace(' Map', '') || 'Floorplan');
     if (routeLayer) {
         map.removeLayer(routeLayer);
         routeLayer = null;
@@ -309,12 +289,10 @@ let nearest2ResultGlobal;
 
 function normalizeRoomName(name) {
     if (!name) return "";
-    const parts = name.split('('); // Split by '(' to potentially isolate the room name
-    const baseName = parts[0].trim(); // Take the part before '(' and trim whitespace
-    return baseName.toUpperCase().replace(/[\s-]/g, ''); // Convert to uppercase and remove spaces and hyphens
+    return name.toUpperCase().replace(/[\s-]/g, ''); // Convert to uppercase and remove spaces and hyphens
 }
 
-function findPoint(sourceRoomName, destRoomName) {
+function findPoint(rooms, nodes, edges, sourceRoomName, destRoomName) {
     // Remove previous markers if they exist
     if (sourceCentroidMarker) {
         map.removeLayer(sourceCentroidMarker);
@@ -329,51 +307,24 @@ function findPoint(sourceRoomName, destRoomName) {
         map.removeLayer(destParallelMarker);
     }
 
-    const sourceFloor = Object.keys(allMapData).find(floorName => {
-        const normalizedSourceName = normalizeRoomName(sourceRoomName).toUpperCase();
-        const floorData = allMapData[floorName];
-        return floorData && (
-            floorData.rooms.some(room => normalizeRoomName(room.name).toUpperCase() === normalizedSourceName || (room.alias && Array.isArray(room.alias) && room.alias.some(alias => normalizeRoomName(alias).toUpperCase() === normalizedSourceName))) ||
-            floorData.nodes.some(node => normalizeRoomName(node.name).toUpperCase() === normalizedSourceName || (node.alias && Array.isArray(node.alias) && node.alias.some(alias => normalizeRoomName(alias).toUpperCase() === normalizedSourceName)))
-        );
-    });
+    const normalizedSourceName = normalizeRoomName(sourceRoomName);
+    const normalizedDestName = normalizeRoomName(destRoomName);
 
-    const destFloor = Object.keys(allMapData).find(floorName => {
-        const normalizedDestName = normalizeRoomName(destRoomName).toUpperCase();
-        const floorData = allMapData[floorName];
-        return floorData && (
-            floorData.rooms.some(room => normalizeRoomName(room.name).toUpperCase() === normalizedDestName || (room.alias && Array.isArray(room.alias) && room.alias.some(alias => normalizeRoomName(alias).toUpperCase() === normalizedDestName))) ||
-            floorData.nodes.some(node => normalizeRoomName(node.name).toUpperCase() === normalizedDestName || (node.alias && Array.isArray(node.alias) && node.alias.some(alias => normalizeRoomName(alias).toUpperCase() === normalizedDestName)))
-        );
-    });
-
-    if (!sourceFloor || !destFloor) {
-        alert("Source or Destination room not found in the loaded floor plans.");
-        return;
-    }
-
-    if (sourceFloor !== currentFloor) {
-        alert(`Source room "${sourceRoomName}" is on floor: ${sourceFloor}. Please switch to that floor to visualize the start.`);
-    }
-    if (destFloor !== currentFloor) {
-        alert(`Destination room "${destRoomName}" is on floor: ${destFloor}. Please switch to that floor to visualize the end.`);
-    }
-
-    const findRoomOrNodeOnFloor = (nameToFind, floorData) => {
-        const normalizedName = normalizeRoomName(nameToFind).toUpperCase();
+    const findRoomOrNode = (nameToFind, roomData, nodeData) => {
+        const normalizedName = normalizeRoomName(nameToFind);
         let foundItem = null;
 
         // Check in rooms
-        for (const item of floorData.rooms) {
-            if (normalizeRoomName(item.name).toUpperCase() === normalizedName || (item.alias && Array.isArray(item.alias) && item.alias.some(alias => normalizeRoomName(alias).toUpperCase() === normalizedName))) {
+        for (const item of roomData) {
+            if (normalizeRoomName(item.name) === normalizedName || (item.alias && Array.isArray(item.alias) && item.alias.some(alias => normalizeRoomName(alias) === normalizedName))) {
                 foundItem = { type: 'room', data: item };
                 return foundItem;
             }
         }
 
         // Check in nodes if not found in rooms
-        for (const item of floorData.nodes) {
-            if (normalizeRoomName(item.name).toUpperCase() === normalizedName || (item.alias && Array.isArray(item.alias) && item.alias.some(alias => normalizeRoomName(alias).toUpperCase() === normalizedName))) {
+        for (const item of nodeData) {
+            if (normalizeRoomName(item.name) === normalizedName || (item.alias && Array.isArray(item.alias) && item.alias.some(alias => normalizeRoomName(alias) === normalizedName))) {
                 foundItem = { type: 'node', data: item };
                 return foundItem;
             }
@@ -382,9 +333,8 @@ function findPoint(sourceRoomName, destRoomName) {
         return null;
     };
 
-    const currentFloorData = allMapData[currentFloor];
-    const sourceResult = findRoomOrNodeOnFloor(sourceRoomName, currentFloorData);
-    const destResult = findRoomOrNodeOnFloor(destRoomName, currentFloorData);
+    const sourceResult = findRoomOrNode(normalizedSourceName, rooms, nodes);
+    const destResult = findRoomOrNode(normalizedDestName, rooms, nodes);
 
     let sRoom = null;
     let dRoom = null;
@@ -410,7 +360,7 @@ function findPoint(sourceRoomName, destRoomName) {
     // console.log("Source:", sourceResult, "Destination:", destResult);
 
     if (!sourceResult || !destResult) {
-        alert("Source or Destination room not found on the current floor!");
+        alert("Source or Destination room not found!");
         return;
     }
 
@@ -467,10 +417,7 @@ function findPoint(sourceRoomName, destRoomName) {
         destCentroidMarker = L.marker([centroid2.x, centroid2.y], { icon: destinationIcon }).addTo(map);
     }
 
-    const currentFloorEdges = currentFloorData.edges || [];
-    const currentFloorNodes = currentFloorData.nodes || [];
-
-    const findNearestEdgeAndParallelPoint = (centroid, edges, nodes) => {
+    const findNearestEdgeAndParallelPoint = (centroid) => {
         let nearestEdge = null;
         let minDistance = Infinity;
         let parallelPoint = null;
@@ -526,7 +473,7 @@ function findPoint(sourceRoomName, destRoomName) {
     };
 
     if (centroid1) {
-        nearest1ResultGlobal = findNearestEdgeAndParallelPoint(centroid1, currentFloorEdges, currentFloorNodes);
+        nearest1ResultGlobal = findNearestEdgeAndParallelPoint(centroid1);
         if (nearest1ResultGlobal.edge && nearest1ResultGlobal.nodes && nearest1ResultGlobal.parallelPoint) {
             sourceParallelMarker = L.circleMarker([nearest1ResultGlobal.parallelPoint.x, nearest1ResultGlobal.parallelPoint.y], {
                 radius: 4,
@@ -539,7 +486,7 @@ function findPoint(sourceRoomName, destRoomName) {
     }
 
     if (centroid2) {
-        nearest2ResultGlobal = findNearestEdgeAndParallelPoint(centroid2, currentFloorEdges, currentFloorNodes);
+        nearest2ResultGlobal = findNearestEdgeAndParallelPoint(centroid2);
         if (nearest2ResultGlobal.edge && nearest2ResultGlobal.nodes && nearest2ResultGlobal.parallelPoint) {
             destParallelMarker = L.circleMarker([nearest2ResultGlobal.parallelPoint.x, nearest2ResultGlobal.parallelPoint.y], {
                 radius: 4,
@@ -551,8 +498,8 @@ function findPoint(sourceRoomName, destRoomName) {
         }
     }
 
-    if (nearest1ResultGlobal && nearest2ResultGlobal && nearest1ResultGlobal.parallelPoint && nearest2ResultGlobal.parallelPoint && currentFloorNodes && currentFloorEdges) {
-        findShortestPathBetweenParallelPoints(currentFloorNodes, currentFloorEdges, nearest1ResultGlobal, nearest2ResultGlobal);
+    if (nearest1ResultGlobal && nearest2ResultGlobal && nearest1ResultGlobal.parallelPoint && nearest2ResultGlobal.parallelPoint && nodes && edges) {
+        findShortestPathBetweenParallelPoints(nodes, edges, nearest1ResultGlobal, nearest2ResultGlobal);
     }
 }
 
@@ -729,15 +676,5 @@ function handleGo() {
         return;
     }
 
-    findPoint(sourceRoomName, destRoomName);
+    findPoint(mapRooms, mapNodes, mapEdges, sourceRoomName, destRoomName);
 }
-
-// Add a floor selector to the HTML
-document.addEventListener('DOMContentLoaded', function() {
-    const controlsDiv = document.querySelector('.controls');
-    if (controlsDiv) {
-        const floorSelector = document.createElement('select');
-        floorSelector.id = 'floor-selector';
-        controlsDiv.prepend(floorSelector); // Add it at the beginning of the controls
-    }
-});
