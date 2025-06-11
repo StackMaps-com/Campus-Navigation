@@ -1,4 +1,4 @@
-# stack_map
+# campus_navigation
 
 A new Flutter project.
 
