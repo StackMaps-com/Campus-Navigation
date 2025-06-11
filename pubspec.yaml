@@ -19,7 +19,11 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0 # Keep this for code quality analysis
-
+  flutter_launcher_icons: ^0.14.4
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "./lib/assets/Logo.png"
 # The following section is specific to Flutter.
 flutter:
   # The following line ensures that the Material Icons font is
