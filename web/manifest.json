@@ -1,6 +1,6 @@
 {
-    "name": "stack_map",
-    "short_name": "stack_map",
+    "name": "campus_navigation",
+    "short_name": "campus_navigation",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
