@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:stack_map/map_screen.dart';
 import 'dart:math' as math;
+import 'searchscreen.dart'; // Import the new screen
 
 class StudentPage extends StatefulWidget {
   const StudentPage({super.key});
@@ -71,10 +72,8 @@ class _StudentPageState extends State<StudentPage> with SingleTickerProviderStat
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
-    );
-    _animationController.forward();
+    )..forward();
 
-    // Initialize item keys
     for (int i = 0; i < itemLabels.length; i++) {
       _itemKeys.add(GlobalKey());
     }
@@ -92,13 +91,11 @@ class _StudentPageState extends State<StudentPage> with SingleTickerProviderStat
     final isDesktop = screenSize.width > 600;
 
     return Scaffold(
-      // Updated background color to a subtle gradient-friendly color
-      backgroundColor: Color(0xFFF0F4FF),
+      backgroundColor: const Color(0xFFF0F4FF),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         flexibleSpace: Container(
-          decoration: BoxDecoration(
-            // Updated app bar gradient with vibrant colors
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -113,7 +110,7 @@ class _StudentPageState extends State<StudentPage> with SingleTickerProviderStat
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   "Hi, Fam..! 👋",
                   style: TextStyle(
                     color: Colors.white,
@@ -123,58 +120,50 @@ class _StudentPageState extends State<StudentPage> with SingleTickerProviderStat
                 ),
                 TweenAnimationBuilder(
                   tween: Tween<double>(begin: 0.0, end: 1.0),
-                  duration: Duration(milliseconds: 800),
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: value,
-                      child: child,
-                    );
-                  },
-                  child: Image.asset(
-                    'lib/images/logo.png',
-                    height: 40,
-                    width: 40,
+                  duration: const Duration(milliseconds: 800),
+                  builder: (context, value, child) => Transform.scale(
+                    scale: value,
+                    child: child,
                   ),
+                  child: Image.asset('lib/images/logo.png', height: 40, width: 40),
                 ),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             TweenAnimationBuilder(
               tween: Tween<double>(begin: 0.0, end: 1.0),
-              duration: Duration(milliseconds: 800),
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, 20 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: child,
+              duration: const Duration(milliseconds: 800),
+              builder: (context, value, child) => Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: Opacity(opacity: value, child: child),
+              ),
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchScreen()));
+                },
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 5,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                );
-              },
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 5,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search a room...',
-                    hintStyle: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
-                    // Updated search icon color to match new gradient
-                    prefixIcon: Icon(Icons.search, color: Color(0xFFFF426F)),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 17),
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.search, color: Color(0xFFFF426F)),
+                      SizedBox(width: 10),
+                      Text(
+                        'Search a room...',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -183,7 +172,6 @@ class _StudentPageState extends State<StudentPage> with SingleTickerProviderStat
         ),
         toolbarHeight: 120,
       ),
-
       body: Row(
         children: [
           if (isDesktop)
